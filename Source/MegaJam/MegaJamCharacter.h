@@ -12,6 +12,15 @@ class UCameraComponent;
 class UInputAction;
 struct FInputActionValue;
 
+
+UENUM(BlueprintType)
+enum class EMovementType : uint8
+{
+	EMT_Walking UMETA(DisplayName = "Walking"),
+	EMT_Crouching UMETA(DisplayName = "Crouching"),
+	EMT_Sprinting UMETA(DisplayName = "Sprinting")
+};
+
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
 
 /**
@@ -49,15 +58,45 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Input")
 	UInputAction* MouseLookAction;
 
+	
+	
+	UPROPERTY(EditAnywhere, Category = "Input")
+	UInputAction* SprintAction;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	UInputAction* CrouchAction;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	UInputAction* UsePrimaryAction;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	UInputAction* ReloadAction;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	UInputAction* AimAction;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	UInputAction* UseQuickItemAction;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	UInputAction* InventoryToggleAction;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	UInputAction* InteractAction;
+
 public:
 
 	/** Constructor */
-	AMegaJamCharacter();	
+	AMegaJamCharacter();
+	virtual void BeginPlay() override;
 
 protected:
 
 	/** Initialize input action bindings */
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	
+	UPROPERTY(EditAnywhere, Category = "Input")
+	class UInputMappingContext* DefaultMappingContext;
 
 protected:
 
@@ -66,6 +105,32 @@ protected:
 
 	/** Called for looking input */
 	void Look(const FInputActionValue& Value);
+
+	/** Added inputs */
+	void Sprint();
+	void EndSprint();
+
+	void StartCrouch();
+	void EndCrouch();
+
+	void UsePrimary();
+
+	void Reload();
+
+	void UseQuickItem();
+
+	void InventoryToggle();
+
+	void PlayerInteract();
+
+	void StartAim();
+	void EndAim();
+
+
+
+
+	UPROPERTY(BlueprintReadOnly, Category = "Movement")
+	EMovementType CurrentMovementType = EMovementType::EMT_Walking;
 
 public:
 
@@ -84,6 +149,23 @@ public:
 	/** Handles jump pressed inputs from either controls or UI interfaces */
 	UFUNCTION(BlueprintCallable, Category="Input")
 	virtual void DoJumpEnd();
+
+	UFUNCTION()
+	void OnInteractSphereOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+	UFUNCTION()
+	void OnInteractSphereOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+
+	AActor* GetNearestInteractableActor();
+
+	UPROPERTY(EditAnywhere)
+	class USphereComponent* InteractSphere;
+
+	UPROPERTY(BlueprintReadOnly)
+	TArray<AActor*> InteractableActors;
+
+	UPROPERTY(BlueprintReadOnly)
+	AActor* CurrentInteractableFocus;
 
 public:
 

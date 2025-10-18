@@ -10,7 +10,10 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
+#include "Components/SphereComponent.h"
+#include "Interactable.h"
 #include "MegaJam.h"
+
 
 AMegaJamCharacter::AMegaJamCharacter()
 {
@@ -46,8 +49,37 @@ AMegaJamCharacter::AMegaJamCharacter()
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	FollowCamera->bUsePawnControlRotation = false;
 
+	// Setup overlap sphere for interaction
+	InteractSphere = CreateDefaultSubobject<USphereComponent>(TEXT("InteractionSphere"));
+	InteractSphere->SetupAttachment(RootComponent);
+	InteractSphere->SetSphereRadius(200.f);
+
+	// Bind delegates for overlap events
+
+	InteractSphere->OnComponentBeginOverlap.AddDynamic(this, &AMegaJamCharacter::OnInteractSphereOverlapBegin);
+	InteractSphere->OnComponentEndOverlap.AddDynamic(this, &AMegaJamCharacter::OnInteractSphereOverlapEnd);
+
+
+
+
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
+}
+
+void AMegaJamCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+	// Add Input Mapping Context
+	if (APlayerController* PlayerController = Cast<APlayerController>(Controller))
+	{
+		if (ULocalPlayer* LocalPlayer = PlayerController->GetLocalPlayer())
+		{
+			if (UEnhancedInputLocalPlayerSubsystem* Subsystem = LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>())
+			{
+				Subsystem->AddMappingContext(DefaultMappingContext, 0);
+			}
+		}
+	}
 }
 
 void AMegaJamCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -55,6 +87,8 @@ void AMegaJamCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 	// Set up action bindings
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent)) {
 		
+		UE_LOG(LogTemp, Warning, TEXT("Binding input actions for '%s'"), *GetNameSafe(this));
+
 		// Jumping
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ACharacter::Jump);
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
@@ -65,6 +99,33 @@ void AMegaJamCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AMegaJamCharacter::Look);
+
+		// Crouching
+		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Started, this, &AMegaJamCharacter::StartCrouch);
+		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Completed, this, &AMegaJamCharacter::EndCrouch);
+
+		// Aiming
+		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Started, this, &AMegaJamCharacter::StartAim);
+		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Completed, this, &AMegaJamCharacter::EndAim);
+
+		// Sprinting
+		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Triggered, this, &AMegaJamCharacter::Sprint);
+		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Completed, this, &AMegaJamCharacter::EndSprint);
+
+		// Using Primary
+		EnhancedInputComponent->BindAction(UsePrimaryAction, ETriggerEvent::Started, this, &AMegaJamCharacter::UsePrimary);
+
+		// Reloading
+		EnhancedInputComponent->BindAction(ReloadAction, ETriggerEvent::Started, this, &AMegaJamCharacter::Reload);
+
+		// Using Quick Item
+		EnhancedInputComponent->BindAction(UseQuickItemAction, ETriggerEvent::Started, this, &AMegaJamCharacter::UseQuickItem);
+
+		// Inventory Toggle
+		EnhancedInputComponent->BindAction(InventoryToggleAction, ETriggerEvent::Started, this, &AMegaJamCharacter::InventoryToggle);
+
+		// Interacting
+		EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started, this, &AMegaJamCharacter::PlayerInteract);
 	}
 	else
 	{
@@ -88,6 +149,68 @@ void AMegaJamCharacter::Look(const FInputActionValue& Value)
 
 	// route the input
 	DoLook(LookAxisVector.X, LookAxisVector.Y);
+}
+
+void AMegaJamCharacter::Sprint()
+{
+}
+
+void AMegaJamCharacter::EndSprint()
+{
+}
+
+void AMegaJamCharacter::StartCrouch()
+{
+}
+
+void AMegaJamCharacter::EndCrouch()
+{
+}
+
+void AMegaJamCharacter::UsePrimary()
+{
+}
+
+void AMegaJamCharacter::Reload()
+{
+}
+
+void AMegaJamCharacter::UseQuickItem()
+{
+}
+
+void AMegaJamCharacter::InventoryToggle()
+{
+}
+
+void AMegaJamCharacter::PlayerInteract()
+{
+	CurrentInteractableFocus = GetNearestInteractableActor();
+	if (CurrentInteractableFocus)
+	{
+		UE_LOG(LogMegaJam, Warning, TEXT("Interacting with %s"), *CurrentInteractableFocus->GetName());
+		//IInteractable* Interactable = Cast<IInteractable>(CurrentInteractableFocus);
+		if (CurrentInteractableFocus->Implements<UInteractable>())
+		{
+			IInteractable::Execute_ItemInteract(CurrentInteractableFocus);
+		}
+		else 
+		{
+			UE_LOG(LogMegaJam, Warning, TEXT("No Interactable"));
+		}
+	}
+	else
+	{
+		UE_LOG(LogMegaJam, Warning, TEXT("No Current Interactable Focus"));
+	}
+}
+
+void AMegaJamCharacter::StartAim()
+{
+}
+
+void AMegaJamCharacter::EndAim()
+{
 }
 
 void AMegaJamCharacter::DoMove(float Right, float Forward)
@@ -130,4 +253,56 @@ void AMegaJamCharacter::DoJumpEnd()
 {
 	// signal the character to stop jumping
 	StopJumping();
+}
+
+void AMegaJamCharacter::OnInteractSphereOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	UE_LOG(LogMegaJam, Warning, TEXT("Overlap Begin with %s"), *OtherActor->GetName());
+	IInteractable* Interactable = Cast<IInteractable>(OtherActor);
+	if (Interactable)
+	{
+		InteractableActors.AddUnique(OtherActor);
+		if (!CurrentInteractableFocus)
+		{
+			CurrentInteractableFocus = OtherActor;
+		}
+	}
+	else
+	{
+		UE_LOG(LogMegaJam, Warning, TEXT("Cast Failed"));
+	}
+}
+
+void AMegaJamCharacter::OnInteractSphereOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+{
+	IInteractable* Interactable = Cast<IInteractable>(OtherActor);
+	if (Interactable)
+	{
+		InteractableActors.Remove(OtherActor);
+	}
+}
+
+AActor* AMegaJamCharacter::GetNearestInteractableActor()
+{
+	if(InteractableActors.Num() == 0) return nullptr;
+	float NearestDistance = (CurrentInteractableFocus->GetActorLocation() - GetActorLocation()).Size();
+	AActor* NewFocus = nullptr;
+	if (CurrentInteractableFocus)
+	{
+		NewFocus = CurrentInteractableFocus;
+	}
+	for (AActor* Actor : InteractableActors)
+	{ 
+		
+		if ((Actor->GetActorLocation() - GetActorLocation()).Size() < NearestDistance)
+		{
+			NearestDistance = (Actor->GetActorLocation() - GetActorLocation()).Size();
+			NewFocus = Actor;
+		}
+	}
+	if (NewFocus)
+	{
+		return NewFocus;
+	}
+	return nullptr;
 }

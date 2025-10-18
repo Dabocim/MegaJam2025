@@ -12,6 +12,7 @@
 #include "InputActionValue.h"
 #include "Components/SphereComponent.h"
 #include "Interactable.h"
+#include "BaseItem.h"
 #include "MegaJam.h"
 
 
@@ -153,34 +154,58 @@ void AMegaJamCharacter::Look(const FInputActionValue& Value)
 
 void AMegaJamCharacter::Sprint()
 {
+	CurrentMovementType = EMovementType::EMT_Sprinting;
+	GetCharacterMovement()->MaxWalkSpeed = SprintSpeed;
 }
 
 void AMegaJamCharacter::EndSprint()
 {
+	CurrentMovementType = EMovementType::EMT_Walking;
+	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 }
 
 void AMegaJamCharacter::StartCrouch()
 {
+	CurrentMovementType = EMovementType::EMT_Crouching;
+	GetCharacterMovement()->MaxWalkSpeed = CrouchSpeed;
 }
 
 void AMegaJamCharacter::EndCrouch()
 {
+	CurrentMovementType = EMovementType::EMT_Walking;
+	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 }
 
 void AMegaJamCharacter::UsePrimary()
 {
+	if (!PrimaryHand) return;
+	if (PrimaryHand->Implements<UInteractable>())
+	{
+		IInteractable::Execute_ItemInteract(PrimaryHand);
+	}
 }
 
 void AMegaJamCharacter::Reload()
 {
+	if (CurrentPrimaryType == EPrimaryType::EPT_Ranged)
+	{
+		//TODO: increase ammo count up to max clip size or total ammo count whichever is lower
+		//TODO: play reload animation
+	}
 }
 
 void AMegaJamCharacter::UseQuickItem()
 {
+	if(!QuickSlotItem) return;
+	if (QuickSlotItem->Implements<UInteractable>())
+	{
+		IInteractable::Execute_ItemInteract(QuickSlotItem);
+	}
 }
 
 void AMegaJamCharacter::InventoryToggle()
 {
+	//TODO : open inventory UI | Probably to be done in Blueprint
 }
 
 void AMegaJamCharacter::PlayerInteract()
@@ -207,6 +232,7 @@ void AMegaJamCharacter::PlayerInteract()
 
 void AMegaJamCharacter::StartAim()
 {
+	//TODO: Leave in blueprint for now?
 }
 
 void AMegaJamCharacter::EndAim()

@@ -21,6 +21,15 @@ enum class EMovementType : uint8
 	EMT_Sprinting UMETA(DisplayName = "Sprinting")
 };
 
+UENUM(BlueprintType)
+enum class EPrimaryType : uint8
+{
+	EPT_None UMETA(DisplayName = "None"),
+	EPT_NonCombatItem UMETA(DisplayName = "Non-Combat Item"),
+	EPT_Melee UMETA(DisplayName = "Melee"),
+	EPT_Ranged UMETA(DisplayName = "Ranged")
+};
+
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
 
 /**
@@ -131,6 +140,22 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, Category = "Movement")
 	EMovementType CurrentMovementType = EMovementType::EMT_Walking;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Weapon")
+	EPrimaryType CurrentPrimaryType = EPrimaryType::EPT_None;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
+	float WalkSpeed = 300.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
+	float CrouchSpeed = 150.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
+	float SprintSpeed = 600.f;
+
+	class AActor* PrimaryHand = nullptr;
+
+	class AActor* QuickSlotItem = nullptr;
 
 public:
 
